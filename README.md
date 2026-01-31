@@ -2,8 +2,8 @@
 
 A **blazing-fast, emoji-powered, oh-my-zsh inspired terminal file explorer** built with Rust and Ratatui.
 
-![Rust Version](https://img.shields.io/badge/rust-1.70%2B-orange.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Rust Version](https://img.shields.io/badge/rust-1.70%2B-orange.svg?style=for-the-badge)
+![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)
 
 | ![Image 1](gallery/1.png) | ![Image 2](gallery/2.png) | ![Image 3](gallery/3.png) | ![Image 4](gallery/4.png) |
 |---------------------------|---------------------------|---------------------------|---------------------------|
