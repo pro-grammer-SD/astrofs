@@ -1,19 +1,25 @@
-mod app;
+mod app_new;
+mod bookmarks;
+mod config;
+mod fileops;
 mod files;
 mod git;
 mod input;
+mod palette;
+mod plugin;
 mod preview;
 mod search;
+mod search_history;
 mod theme;
-mod ui;
+mod ui_new;
+mod workspace;
 
-use app::{App, AppMode};
+use app_new::{App, AppMode, InputMode};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use input::{handle_key_event, Action};
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 use std::time::Duration;
@@ -53,7 +59,10 @@ fn run_app<B: ratatui::backend::Backend>(
     app: &mut App,
 ) -> anyhow::Result<()> {
     loop {
-        terminal.draw(|f| ui::draw(f, app))?;
+        let size = terminal.get_frame().size();
+        app.set_viewport(size.width as usize, size.height as usize);
+
+        terminal.draw(|f| ui_new::draw(f, app))?;
 
         if !app.running {
             break;
@@ -74,11 +83,57 @@ fn run_app<B: ratatui::backend::Backend>(
 }
 
 fn handle_input(app: &mut App, key: event::KeyEvent) -> anyhow::Result<()> {
-    // Clear messages on new input
-    app.message = None;
-    app.error = None;
+    // Don't clear messages for input mode
+    if !matches!(app.mode, AppMode::Input(_)) {
+        app.message = None;
+        app.error = None;
+    }
 
-    // Handle search mode input
+    // Handle input mode (text input for file creation, path entry, etc.)
+    if let AppMode::Input(input_mode) = app.mode.clone() {
+        match key.code {
+            KeyCode::Char(c) => {
+                app.input_buffer.push(c);
+                return Ok(());
+            }
+            KeyCode::Backspace => {
+                app.input_buffer.pop();
+                return Ok(());
+            }
+            KeyCode::Enter => {
+                let input = app.input_buffer.clone();
+                app.input_buffer.clear();
+                app.mode = AppMode::Normal;
+
+                match input_mode {
+                    InputMode::CreateFile => {
+                        app.create_file(&input)?;
+                    }
+                    InputMode::CreateDirectory => {
+                        app.create_directory(&input)?;
+                    }
+                    InputMode::Rename => {
+                        app.rename_selected(&input)?;
+                    }
+                    InputMode::GoToPath => {
+                        app.go_to_path(&input)?;
+                    }
+                    InputMode::AddBookmark => {
+                        app.add_bookmark(input)?;
+                    }
+                }
+                return Ok(());
+            }
+            KeyCode::Esc => {
+                app.input_buffer.clear();
+                app.mode = AppMode::Normal;
+                return Ok(());
+            }
+            _ => return Ok(()),
+        }
+    }
+
+    // Handle search mode
     if matches!(app.mode, AppMode::Search) {
         match key.code {
             KeyCode::Char(c) => {
@@ -95,31 +150,51 @@ fn handle_input(app: &mut App, key: event::KeyEvent) -> anyhow::Result<()> {
             }
             KeyCode::Enter => {
                 if !app.search_engine.results.is_empty() {
-                    // Navigate to first result - clone the path to avoid borrow issues
-                    let result_path = app.search_engine.results.first().map(|r| r.path.clone());
-                    let result_is_dir = app.search_engine.results.first().map(|r| r.is_dir);
-                    
-                    if let (Some(path), Some(is_dir)) = (result_path, result_is_dir) {
-                        if is_dir {
-                            app.current_dir = path;
-                            app.selected_index = 0;
-                            app.scroll_offset = 0;
-                            app.refresh_directory()?;
-                        } else if let Some(parent) = path.parent() {
-                            app.current_dir = parent.to_path_buf();
-                            app.refresh_directory()?;
-                            // Try to select the file
-                            if let Some(pos) = app.entries.iter().position(|e| e.path == path) {
-                                app.selected_index = pos;
-                                app.update_preview();
-                            }
-                        }
-                    }
-                    app.cancel_search();
+                    app.navigate_to_search_result(0)?;
                 }
                 return Ok(());
             }
-            _ => {}
+            _ => return Ok(()),
+        }
+    }
+
+    // Handle command palette
+    if matches!(app.mode, AppMode::CommandPalette) {
+        match key.code {
+            KeyCode::Char(c) => {
+                app.command_palette.add_char(c);
+                app.command_search_index = 0;
+                return Ok(());
+            }
+            KeyCode::Backspace => {
+                app.command_palette.remove_char();
+                return Ok(());
+            }
+            KeyCode::Esc => {
+                app.mode = AppMode::Normal;
+                app.message = None;
+                return Ok(());
+            }
+            KeyCode::Up => {
+                if app.command_search_index > 0 {
+                    app.command_search_index -= 1;
+                }
+                return Ok(());
+            }
+            KeyCode::Down => {
+                if app.command_search_index < app.command_palette.visible_count().saturating_sub(1) {
+                    app.command_search_index += 1;
+                }
+                return Ok(());
+            }
+            KeyCode::Enter => {
+                if let Some(cmd) = app.command_palette.get_by_index(app.command_search_index) {
+                    let cmd = cmd.clone();
+                    app.execute_command(&cmd)?;
+                }
+                return Ok(());
+            }
+            _ => return Ok(()),
         }
     }
 
@@ -129,45 +204,57 @@ fn handle_input(app: &mut App, key: event::KeyEvent) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // Handle normal mode actions
-    let action = handle_key_event(key, matches!(app.mode, AppMode::Search));
-
-    match action {
-        Action::MoveUp => app.move_up(),
-        Action::MoveDown => app.move_down(),
-        Action::PageUp => app.page_up(),
-        Action::PageDown => app.page_down(),
-        Action::Home => app.go_home(),
-        Action::End => app.go_end(),
-        Action::Enter => {
-            if let Err(e) = app.enter_selected() {
-                app.error = Some(format!("Error: {}", e));
-            }
+    // Handle normal mode navigation and actions
+    match key.code {
+        // Navigation
+        KeyCode::Up | KeyCode::Char('k') => app.move_up(),
+        KeyCode::Down | KeyCode::Char('j') => app.move_down(),
+        KeyCode::PageUp => app.page_up(),
+        KeyCode::PageDown => app.page_down(),
+        KeyCode::Home => app.go_home(),
+        KeyCode::End => app.go_end(),
+        
+        // Enter/Open
+        KeyCode::Enter | KeyCode::Right => {
+            app.enter_selected()?;
         }
-        Action::GoBack => {
-            if let Err(e) = app.go_back() {
-                app.error = Some(format!("Error: {}", e));
-            }
+        
+        // Go back/Up
+        KeyCode::Backspace | KeyCode::Left | KeyCode::Char('h') => {
+            app.go_back()?;
         }
-        Action::ToggleHidden => {
-            if let Err(e) = app.toggle_hidden() {
-                app.error = Some(format!("Error: {}", e));
-            }
-        }
-        Action::Search => app.start_search(),
-        Action::Refresh => {
-            if let Err(e) = app.refresh_directory() {
-                app.error = Some(format!("Error refreshing: {}", e));
-            } else {
-                app.message = Some("Directory refreshed".to_string());
-            }
-        }
-        Action::Help => {
-            app.mode = AppMode::Help;
-        }
-        Action::Quit => app.quit(),
+        
+        // File operations
+        KeyCode::Char('n') => app.mode = AppMode::Input(InputMode::CreateFile),
+        KeyCode::Char('N') => app.mode = AppMode::Input(InputMode::CreateDirectory),
+        KeyCode::Char('d') => app.delete_selected()?,
+        KeyCode::Char('r') => app.mode = AppMode::Input(InputMode::Rename),
+        KeyCode::Char('c') => app.copy_selected()?,
+        
+        // Search
+        KeyCode::Char('/') => app.start_search(),
+        KeyCode::Char('.') => app.toggle_hidden()?,
+        
+        // Workspaces
+        KeyCode::Char('t') => app.new_workspace()?,
+        KeyCode::Char('w') => app.close_workspace()?,
+        KeyCode::Char(']') => app.next_workspace(),
+        KeyCode::Char('[') => app.prev_workspace(),
+        
+        // Bookmarks
+        KeyCode::Char('b') => app.mode = AppMode::Input(InputMode::AddBookmark),
+        
+        // Command Palette
+        KeyCode::Char('p') => app.start_command_palette(),
+        
+        // System
+        KeyCode::Char('?') => app.mode = AppMode::Help,
+        KeyCode::Char('q') => app.quit(),
+        KeyCode::Esc => {} // Just cancel any selection
+        
         _ => {}
     }
 
     Ok(())
 }
+

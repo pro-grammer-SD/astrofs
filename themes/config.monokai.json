@@ -1,0 +1,45 @@
+{
+  "name": "monokai",
+  "folder": {
+    "fg": "rgb(102,217,239)",
+    "bold": true
+  },
+  "executable": {
+    "fg": "rgb(166,226,46)",
+    "bold": true
+  },
+  "image": {
+    "fg": "rgb(249,38,114)"
+  },
+  "archive": {
+    "fg": "rgb(253,151,31)"
+  },
+  "text_file": {
+    "fg": "rgb(248,248,242)"
+  },
+  "selected": {
+    "fg": "rgb(39,40,34)",
+    "bg": "rgb(102,217,239)",
+    "bold": true
+  },
+  "hidden": {
+    "fg": "rgb(117,113,94)"
+  },
+  "status_bar": {
+    "fg": "rgb(248,248,242)",
+    "bg": "rgb(39,40,34)"
+  },
+  "error": {
+    "fg": "rgb(249,38,114)",
+    "bold": true
+  },
+  "normal": {
+    "fg": "rgb(248,248,242)"
+  },
+  "border": {
+    "fg": "rgb(102,217,239)"
+  },
+  "help": {
+    "fg": "rgb(253,151,31)"
+  }
+}

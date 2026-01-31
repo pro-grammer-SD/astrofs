@@ -1,19 +1,58 @@
 [package]
 name = "astrofs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
+# TUI
 ratatui = "0.26"
 crossterm = "0.27"
+
+# File operations
 walkdir = "2"
+fs_extra = "1.3"
+tempfile = "3.8"
+
+# Concurrency
 rayon = "1"
-ignore = "0.4"
-syntect = "5"
-infer = "0.15"
-humansize = "2"
+tokio = { version = "1", features = ["full"] }
+
+# Git
 git2 = { version = "0.18", default-features = false }
+ignore = "0.4"
+
+# Syntax highlighting
+syntect = "5"
+
+# File type detection
+infer = "0.15"
+
+# Archive support
+zip = "0.6"
+tar = "0.4"
+flate2 = "1.0"
+
+# Image metadata
+image = "0.24"
+
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+# Error handling
 anyhow = "1.0"
+thiserror = "1.0"
+
+# Utilities
+humansize = "2"
 chrono = "0.4"
+uuid = { version = "1.0", features = ["v4"] }
+dirs = "5.0"
+open = "5.0"
+
+# Plugin system
+libloading = "0.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"

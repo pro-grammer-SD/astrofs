@@ -20,7 +20,3 @@ Thumbs.db
 *.so
 *.dylib
 *.exe
-
-# Keep everything in dist/
-!dist/
-!dist/**

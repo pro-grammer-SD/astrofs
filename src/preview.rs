@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Read;
 use std::path::Path;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
@@ -8,6 +9,7 @@ use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 
 #[allow(dead_code)]
+#[derive(Clone, Debug)]
 pub struct PreviewContent {
     pub lines: Vec<Line<'static>>,
     pub is_binary: bool,
@@ -22,6 +24,13 @@ pub enum PreviewType {
     Image,
     Archive,
     Error(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct ImageMetadata {
+    pub width: u32,
+    pub height: u32,
+    pub format: String,
 }
 
 pub fn generate_preview(path: &Path, max_lines: usize) -> PreviewContent {
@@ -124,8 +133,15 @@ fn preview_image(path: &Path) -> PreviewContent {
         lines.push(Line::from(format!("Format: {}", ext.to_string_lossy().to_uppercase())));
     }
 
-    lines.push(Line::from(""));
-    lines.push(Line::from("(Image preview not available in terminal)"));
+    // Try to extract image dimensions
+    if let Ok(img_data) = image::image_dimensions(path) {
+        lines.push(Line::from(format!("Dimensions: {}x{} px", img_data.0, img_data.1)));
+    }
+
+    if lines.len() < 5 {
+        lines.push(Line::from(""));
+        lines.push(Line::from("(Image preview not available in terminal)"));
+    }
 
     PreviewContent {
         lines,
@@ -141,8 +157,70 @@ fn preview_archive(path: &Path) -> PreviewContent {
         lines.push(Line::from(format!("Size: {}", humansize::format_size(metadata.len(), humansize::BINARY))));
     }
 
+    if let Some(ext) = path.extension() {
+        let ext_str = ext.to_string_lossy().to_lowercase();
+        lines.push(Line::from(format!("Type: {}", ext_str.to_uppercase())));
+    }
+
     lines.push(Line::from(""));
-    lines.push(Line::from("(Archive listing not yet implemented)"));
+
+    // Try to list ZIP contents
+    if path.extension().map(|e| e.to_string_lossy().to_lowercase() == "zip").unwrap_or(false) {
+        if let Ok(file) = fs::File::open(path) {
+            if let Ok(mut zip) = zip::ZipArchive::new(file) {
+                lines.push(Line::from(format!("📦 Contents ({} files):", zip.len())));
+                for i in 0..zip.len().min(20) {
+                    if let Ok(file) = zip.by_index(i) {
+                        let size_str = if file.is_dir() { "<DIR>".to_string() } else { 
+                            humansize::format_size(file.size(), humansize::BINARY) 
+                        };
+                        lines.push(Line::from(format!("  {} ({})", file.name(), size_str)));
+                    }
+                }
+                if zip.len() > 20 {
+                    lines.push(Line::from(format!("  ... and {} more files", zip.len() - 20)));
+                }
+            } else {
+                lines.push(Line::from("⚠️  Could not read ZIP archive"));
+            }
+        }
+    }
+    // Try to list TAR contents
+    else if path.extension().map(|e| {
+        let s = e.to_string_lossy().to_lowercase();
+        s == "tar" || s == "gz" || s == "bz2" || s == "xz"
+    }).unwrap_or(false) {
+        if let Ok(file) = fs::File::open(path) {
+            let reader: Box<dyn Read> = if path.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default() == "gz" {
+                Box::new(flate2::read::GzDecoder::new(file))
+            } else {
+                Box::new(file)
+            };
+
+            let mut archive = tar::Archive::new(reader);
+            lines.push(Line::from("📦 Contents (TAR archive):"));
+            if let Ok(entries) = archive.entries() {
+                let mut count = 0;
+                for entry_result in entries.take(20) {
+                    if let Ok(entry) = entry_result {
+                        if let Ok(size) = entry.header().size() {
+                            let size_str = humansize::format_size(size, humansize::BINARY);
+                            if let Ok(path) = entry.path() {
+                                lines.push(Line::from(format!("  {} ({})", path.display(), size_str)));
+                                count += 1;
+                            }
+                        }
+                    }
+                }
+                if count == 20 {
+                    lines.push(Line::from("  ... and more files"));
+                }
+            }
+        }
+    } else {
+        lines.push(Line::from("Archive format not directly supported for preview"));
+        lines.push(Line::from("Supported: .zip, .tar, .tar.gz"));
+    }
 
     PreviewContent {
         lines,
