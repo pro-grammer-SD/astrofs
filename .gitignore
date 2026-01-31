@@ -1,0 +1,26 @@
+# Rust build
+/target
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.dll
+*.so
+*.dylib
+*.exe
+
+# Keep everything in dist/
+!dist/
+!dist/**

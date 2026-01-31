@@ -1,0 +1,89 @@
+{
+  "theme": {
+    "name": "Oh-My-Zsh Inspired",
+    "colors": {
+      "folder": {
+        "fg": "Cyan",
+        "bold": true
+      },
+      "executable": {
+        "fg": "Green",
+        "bold": true
+      },
+      "image": {
+        "fg": "Magenta"
+      },
+      "archive": {
+        "fg": "Yellow"
+      },
+      "text_file": {
+        "fg": "White"
+      },
+      "selected": {
+        "bg": "Cyan",
+        "fg": "Black",
+        "bold": true
+      },
+      "hidden": {
+        "fg": "DarkGray"
+      },
+      "status_bar": {
+        "bg": "Magenta",
+        "fg": "White"
+      },
+      "error": {
+        "fg": "Red",
+        "bold": true
+      },
+      "border": {
+        "fg": "Cyan"
+      },
+      "help": {
+        "fg": "Yellow"
+      }
+    },
+    "emojis": {
+      "folder": "📁",
+      "file": "📄",
+      "image": "🖼️",
+      "executable": "⚡",
+      "archive": "🗜️",
+      "protected": "🔒",
+      "broken": "❌",
+      "code": "📝",
+      "music": "🎵",
+      "video": "🎬",
+      "pdf": "📕"
+    }
+  },
+  "behavior": {
+    "show_hidden_by_default": false,
+    "max_preview_lines": 200,
+    "search_max_results": 100,
+    "enable_git_integration": true,
+    "enable_syntax_highlighting": true
+  },
+  "keybindings": {
+    "quit": "q",
+    "move_up": ["Up", "k"],
+    "move_down": ["Down", "j"],
+    "enter": "Enter",
+    "go_back": ["Backspace", "h"],
+    "search": "/",
+    "toggle_hidden": ".",
+    "delete": "d",
+    "rename": "r",
+    "copy": "c",
+    "move": "m",
+    "new_folder": "n",
+    "refresh": "F5",
+    "help": "?"
+  },
+  "ui": {
+    "file_list_width_percent": 30,
+    "preview_width_percent": 70,
+    "status_bar_height": 3,
+    "show_file_sizes": true,
+    "show_item_count": true
+  }
+}
