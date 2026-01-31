@@ -2,6 +2,8 @@
 
 A **blazing-fast, emoji-powered, oh-my-zsh inspired terminal file explorer** built with Rust and Ratatui.
 
+[![Build Status](https://img.shields.io/github/actions/workflow/status/pro-grammer-SD/astrofs/build-and-release.yml?branch=main&style=for-the-badge)](https://github.com/pro-grammer-SD/astrofs/actions)
+[![Latest Release](https://img.shields.io/github/v/release/pro-grammer-SD/astrofs?style=for-the-badge)](https://github.com/pro-grammer-SD/astrofs/releases/latest)
 ![Rust Version](https://img.shields.io/badge/rust-1.70%2B-orange.svg?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)
 
