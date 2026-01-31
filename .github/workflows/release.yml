@@ -1,0 +1,122 @@
+name: Release App
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.ver.outputs.changed }}
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: ver
+        shell: bash
+        run: |
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            OLD=$(git show HEAD^:Cargo.toml | grep '^version' | sed 's/version = "\(.*\)"/\1/')
+          else
+            OLD="none"
+          fi
+          NEW=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$NEW" >> $GITHUB_OUTPUT
+          if [ "$OLD" != "$NEW" ]; then echo "changed=true" >> $GITHUB_OUTPUT; else echo "changed=false" >> $GITHUB_OUTPUT; fi
+
+  build:
+    needs: check-version
+    if: needs.check-version.outputs.changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: linux
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: windows
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: macos
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir dist
+          BIN=astrofs
+          if [[ "${{ matrix.platform }}" == "windows" ]]; then BIN=astrofs.exe; fi
+          cp target/${{ matrix.target }}/release/$BIN dist/
+          ARCHIVE="astrofs-${{ matrix.platform }}-${{ matrix.target }}-v${{ needs.check-version.outputs.version }}.tar.xz"
+          tar -cJf dist/$ARCHIVE -C dist $BIN
+          echo "archive=$ARCHIVE" >> $GITHUB_ENV
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.archive }}
+          path: dist/${{ env.archive }}
+
+  checksums:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Generate SHA256
+        run: |
+          sha256sum *.tar.xz > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SHA256SUMS
+          path: SHA256SUMS.txt
+
+  publish:
+    needs: [check-version, build, checksums]
+    if: needs.check-version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: UTC Time
+        id: time
+        run: echo "utc=$(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_OUTPUT
+
+      - name: Generate Changelog
+        id: log
+        run: |
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 2>/dev/null || echo "")..HEAD > CHANGELOG.txt || true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: Release v${{ needs.check-version.outputs.version }}
+          body: |
+            Release Version: v${{ needs.check-version.outputs.version }}
+            Built at (UTC): ${{ steps.time.outputs.utc }}
+
+            Changelog:
+            $(cat CHANGELOG.txt)
+
+            Checksums:
+            $(cat artifacts/SHA256SUMS/SHA256SUMS.txt)
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
