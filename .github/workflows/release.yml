@@ -1,8 +1,11 @@
 name: Build and Release App
 
 on:
+  workflow_dispatch:        # manual trigger via GitHub UI
+  release:
+    types: [created]       # triggers when a GitHub release is created
   push:
-    branches: [ main ]
+    branches: [ main ]     # optional, keep push trigger if needed
 
 permissions:
   contents: write
@@ -102,7 +105,7 @@ jobs:
             Changes:
             ${{ steps.changelog.outputs.log }}
 
-            SHA256 checksums are included in the artifacts.
+            SHA256 checksums included.
           files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
