@@ -1,4 +1,4 @@
-name: Release App
+name: Build and Release App
 
 on:
   push:
@@ -22,17 +22,34 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+
       - id: ver
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          NEW=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$NEW" >> $GITHUB_OUTPUT
+
           if git rev-parse HEAD^ >/dev/null 2>&1; then
             OLD=$(git show HEAD^:Cargo.toml | grep '^version' | sed 's/version = "\(.*\)"/\1/')
           else
             OLD="none"
           fi
-          NEW=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
-          echo "version=$NEW" >> $GITHUB_OUTPUT
-          if [ "$OLD" != "$NEW" ]; then echo "changed=true" >> $GITHUB_OUTPUT; else echo "changed=false" >> $GITHUB_OUTPUT; fi
+
+          if gh release view "v$NEW" >/dev/null 2>&1; then
+            TAG_EXISTS="yes"
+          else
+            TAG_EXISTS="no"
+          fi
+
+          if [ "$OLD" != "$NEW" ] || [ "$TAG_EXISTS" = "no" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
 
   build:
     needs: check-version
@@ -75,12 +92,11 @@ jobs:
 
   checksums:
     needs: build
+    if: needs.check-version.outputs.changed == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-      - name: Generate SHA256
-        run: |
-          sha256sum *.tar.xz > SHA256SUMS.txt
+      - run: sha256sum *.tar.xz > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: SHA256SUMS
