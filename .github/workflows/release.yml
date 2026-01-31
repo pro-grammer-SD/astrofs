@@ -7,132 +7,97 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  check-version:
+  version:
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.ver.outputs.changed }}
-      version: ${{ steps.ver.outputs.version }}
+      version: ${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Install GitHub CLI
-        run: sudo apt-get install gh -y
-
-      - id: ver
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: v
         run: |
-          NEW=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
-          echo "version=$NEW" >> $GITHUB_OUTPUT
-
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            OLD=$(git show HEAD^:Cargo.toml | grep '^version' | sed 's/version = "\(.*\)"/\1/')
-          else
-            OLD="none"
-          fi
-
-          if gh release view "v$NEW" >/dev/null 2>&1; then
-            TAG_EXISTS="yes"
-          else
-            TAG_EXISTS="no"
-          fi
-
-          if [ "$OLD" != "$NEW" ] || [ "$TAG_EXISTS" = "no" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
+          V=$(grep '^version' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$V" >> $GITHUB_OUTPUT
 
   build:
-    needs: check-version
-    if: needs.check-version.outputs.changed == 'true'
+    needs: version
     strategy:
-      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            platform: linux
+            bin: astrofs
+            osname: linux
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            platform: windows
+            bin: astrofs.exe
+            osname: windows
           - os: macos-latest
             target: x86_64-apple-darwin
-            platform: macos
+            bin: astrofs
+            osname: macos
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
+
+      - run: rustup target add ${{ matrix.target }}
+
       - run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package
-        shell: bash
-        run: |
-          mkdir dist
-          BIN=astrofs
-          if [[ "${{ matrix.platform }}" == "windows" ]]; then BIN=astrofs.exe; fi
-          cp target/${{ matrix.target }}/release/$BIN dist/
-          ARCHIVE="astrofs-${{ matrix.platform }}-${{ matrix.target }}-v${{ needs.check-version.outputs.version }}.tar.xz"
-          tar -cJf dist/$ARCHIVE -C dist $BIN
-          echo "archive=$ARCHIVE" >> $GITHUB_ENV
+      - run: |
+          mkdir out
+          cp target/${{ matrix.target }}/release/${{ matrix.bin }} out/
+          cd out
+          FILE=astrofs-v${{ needs.version.outputs.version }}-${{ matrix.osname }}-x86_64
+          mv ${{ matrix.bin }} $FILE
+          xz -9 $FILE
+          sha256sum $FILE.xz > $FILE.xz.sha256
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.archive }}
-          path: dist/${{ env.archive }}
+          name: ${{ matrix.osname }}
+          path: out/*
 
-  checksums:
-    needs: build
-    if: needs.check-version.outputs.changed == 'true'
+  release:
+    needs: [version, build]
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-      - run: sha256sum *.tar.xz > SHA256SUMS.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: SHA256SUMS
-          path: SHA256SUMS.txt
 
-  publish:
-    needs: [check-version, build, checksums]
-    if: needs.check-version.outputs.changed == 'true'
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: UTC Time
-        id: time
-        run: echo "utc=$(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_OUTPUT
+      - id: time
+        run: echo "utc=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
 
-      - name: Generate Changelog
-        id: log
+      - id: changelog
         run: |
-          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 2>/dev/null || echo "")..HEAD > CHANGELOG.txt || true
+          git fetch --tags --force
+          LAST=$(git tag --sort=-creatordate | head -1)
+          if [ -z "$LAST" ]; then
+            LOG=$(git log --pretty=format:"- %s")
+          else
+            LOG=$(git log $LAST..HEAD --pretty=format:"- %s")
+          fi
+          echo "log<<EOF" >> $GITHUB_OUTPUT
+          echo "$LOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.check-version.outputs.version }}
-          name: Release v${{ needs.check-version.outputs.version }}
+          tag_name: v${{ needs.version.outputs.version }}
+          name: AstroFS v${{ needs.version.outputs.version }}
           body: |
-            Release Version: v${{ needs.check-version.outputs.version }}
-            Built at (UTC): ${{ steps.time.outputs.utc }}
+            Release Time: ${{ steps.time.outputs.utc }}
 
-            Changelog:
-            $(cat CHANGELOG.txt)
+            Changes:
+            ${{ steps.changelog.outputs.log }}
 
-            Checksums:
-            $(cat artifacts/SHA256SUMS/SHA256SUMS.txt)
+            Builds include SHA256 checksum files.
           files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
