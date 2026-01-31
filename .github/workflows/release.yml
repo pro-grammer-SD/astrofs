@@ -1,11 +1,7 @@
 name: Build and Release App
 
 on:
-  workflow_dispatch:        # manual trigger
-  release:
-    types: [created]       # trigger on new release
-  push:
-    branches: [ main ]     # optional automatic build on push
+  workflow_dispatch:        # manual trigger only
 
 permissions:
   contents: write
@@ -74,7 +70,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4       # <- necessary for git commands
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0           # full history + tags for changelog
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -82,14 +81,15 @@ jobs:
       - id: time
         run: echo "utc=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
 
-      - id: changelog
+      - name: Generate changelog
+        id: changelog
         run: |
-          git fetch --tags --force
-          LAST=$(git tag --sort=-creatordate | head -1)
-          if [ -z "$LAST" ]; then
+          # Get latest tag, or empty if none
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
             LOG=$(git log --pretty=format:"- %s")
           else
-            LOG=$(git log $LAST..HEAD --pretty=format:"- %s")
+            LOG=$(git log $LAST_TAG..HEAD --pretty=format:"- %s")
           fi
           echo "log<<EOF" >> $GITHUB_OUTPUT
           echo "$LOG" >> $GITHUB_OUTPUT
