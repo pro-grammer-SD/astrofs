@@ -161,10 +161,10 @@ pub struct Theme {
 - [x] Page up/down navigation
 - [x] Jump to first/last item
 - [x] Help screen
+- [x] Syntax highlighting in file preview
 
 ### Planned Features 📋
 
-- [ ] Syntax highlighting in file preview
 - [ ] File operations (copy, move, delete, rename)
 - [ ] Create new folders/files
 - [ ] Archive file preview (ZIP, TAR contents)
