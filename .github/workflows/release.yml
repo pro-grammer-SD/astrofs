@@ -1,11 +1,11 @@
 name: Build and Release App
 
 on:
-  workflow_dispatch:        # manual trigger via GitHub UI
+  workflow_dispatch:        # manual trigger
   release:
-    types: [created]       # triggers when a GitHub release is created
+    types: [created]       # trigger on new release
   push:
-    branches: [ main ]     # optional, keep push trigger if needed
+    branches: [ main ]     # optional automatic build on push
 
 permissions:
   contents: write
@@ -47,7 +47,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: dtolnay/rust-toolchain@stable
 
       - run: rustup target add ${{ matrix.target }}
@@ -75,6 +74,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4       # <- necessary for git commands
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -105,7 +105,7 @@ jobs:
             Changes:
             ${{ steps.changelog.outputs.log }}
 
-            SHA256 checksums included.
+            SHA256 checksums included in artifacts.
           files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
