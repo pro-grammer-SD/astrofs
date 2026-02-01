@@ -10,6 +10,7 @@ Write-Host "✓ Rust/Cargo found"
 Write-Host ""
 
 Write-Host "📦 Compiling in release mode (this may take a few minutes)..."
+$env:PYO3_USE_ABI3_FORWARD_COMPATIBILITY="1"
 cargo build --release
 
 if ($LASTEXITCODE -eq 0) {

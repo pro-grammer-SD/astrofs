@@ -1,7 +1,15 @@
 [package]
-name = "astrofs"
+name = "pyastrofs"
 version = "0.1.1"
 edition = "2021"
+
+[lib]
+name = "pyastrofs"
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "astrofs"
+path = "src/main.rs"
 
 [dependencies]
 # TUI & Terminal
@@ -78,3 +86,10 @@ tracing-subscriber = "0.3"
 # Color parsing & manipulation
 palette = "0.7"  # Advanced color handling
 colorsys = "0.7"  # Color system conversions
+
+# Python bindings
+pyo3 = { version = "0.20", features = ["extension-module"] }
+
+[profile.release]
+opt-level = 3
+lto = true

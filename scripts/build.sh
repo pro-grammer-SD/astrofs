@@ -14,6 +14,7 @@ echo ""
 
 # Build in release mode
 echo "📦 Compiling in release mode (this may take a few minutes)..."
+export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 cargo build --release
 
 if [ $? -eq 0 ]; then

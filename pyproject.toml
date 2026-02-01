@@ -1,0 +1,68 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "pyastrofs"
+version = "0.1.1"
+description = "AstroFS - Advanced file system explorer with media support and plugin system"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "AstroFS Team", email = "team@astrofs.dev"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: System :: File Systems",
+    "Topic :: Multimedia",
+]
+keywords = ["file-system", "explorer", "tui", "media", "plugins"]
+
+[project.urls]
+Homepage = "https://github.com/pro-grammer-SD/astrofs"
+Repository = "https://github.com/pro-grammer-SD/astrofs"
+Issues = "https://github.com/pro-grammer-SD/astrofs/issues"
+Documentation = "https://github.com/pro-grammer-SD/astrofs/wiki"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=3.0",
+    "mypy>=1.0",
+    "black>=23.0",
+    "flake8>=6.0",
+    "isort>=5.0",
+]
+docs = [
+    "sphinx>=5.0",
+    "sphinx-rtd-theme>=1.0",
+]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "pyastrofs"
+sdist-include = ["README.md", "LICENSE", "PYTHON_BINDINGS.md", "examples_python_bindings.py"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312', 'py313', 'py314']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+

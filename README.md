@@ -118,6 +118,67 @@ src/
 └── git.rs           # Git integration
 ```
 
+## 🐍 Python Bindings
+
+AstroFS provides comprehensive Python bindings for programmatic access. See [PYTHON_BINDINGS.md](PYTHON_BINDINGS.md) for complete documentation.
+
+### Installation
+
+```bash
+pip install pyastrofs # THIS IS NOT IMPLEMENTED YET, SO YOU'LL NEED TO BUILD FROM SOURCE BY USING ./scripts/build_bindings
+```
+
+### Quick Example
+
+```python
+from pyastrofs import PyAstroFS
+
+fs = PyAstroFS()
+fs.navigate("/home/user")
+files = fs.list_files()
+
+for file in files:
+    print(f"{file.name} - {file.size} bytes")
+```
+
+### Building from Source
+
+Use the build scripts in the `scripts/` directory:
+
+#### Linux/macOS
+
+```bash
+chmod +x scripts/build_bindings.sh
+./scripts/build_bindings.sh --release
+pip install whl/*.whl
+```
+
+#### Windows
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+.\scripts\build_bindings.ps1 -Release
+pip install whl/*.whl
+```
+
+#### Build Script Options
+
+Both scripts support the same options:
+
+```bash
+# Linux/macOS
+./scripts/build_bindings.sh --help
+./scripts/build_bindings.sh --output build --release
+./scripts/build_bindings.sh --debug --skip-stubs
+
+# Windows
+.\scripts\build_bindings.ps1 -Help
+.\scripts\build_bindings.ps1 -OutputDir build -Release
+.\scripts\build_bindings.ps1 -Release $false -GenerateStubs $false
+```
+
+All wheels are built to the `whl/` directory with type stubs (`pyastrofs.pyi`) included.
+
 ## 🎨 Customization
 
 The color theme and emojis can be customized in `src/theme.rs`:
@@ -146,6 +207,28 @@ pub struct Theme {
 - **serde + serde_json** - Configuration (ready for future use)
 - **anyhow** - Error handling
 - **chrono** - Date/time handling
+
+### Python Bindings Dependencies
+
+For building Python bindings:
+
+- **maturin** - Build tool for Python packages (`pip install maturin`)
+- **PyO3** - Python bindings framework (automatically managed by Cargo)
+
+## 📦 Project Structure
+
+```
+astrofs/
+├── src/               # Rust source code
+├── scripts/           # Build and utility scripts
+│   ├── build_bindings.ps1    # Windows PowerShell build script
+│   └── build_bindings.sh     # Linux/macOS bash build script
+├── whl/               # Built Python wheels (generated)
+├── Cargo.toml         # Rust project manifest
+├── pyproject.toml     # Python project configuration
+├── pyastrofs.pyi        # Python type stubs
+└── examples_python_bindings.py  # Python usage examples
+```
 
 ## 🗺️ Roadmap
 
