@@ -1,19 +1,20 @@
 [package]
 name = "astrofs"
-version = "0.2.0"
+version = "0.1.1"
 edition = "2021"
 
 [dependencies]
-# TUI
+# TUI & Terminal
 ratatui = "0.26"
 crossterm = "0.27"
+unicode-width = "0.1"
 
 # File operations
 walkdir = "2"
 fs_extra = "1.3"
 tempfile = "3.8"
 
-# Concurrency
+# Concurrency & Async
 rayon = "1"
 tokio = { version = "1", features = ["full"] }
 
@@ -26,18 +27,31 @@ syntect = "5"
 
 # File type detection
 infer = "0.15"
+mime = "0.3"
 
 # Archive support
 zip = "0.6"
 tar = "0.4"
 flate2 = "1.0"
 
-# Image metadata
+# Image handling & terminal rendering
 image = "0.24"
+sixel-image = "0.1"
+viuer = "0.8"  # Display images in terminal
+
+# Video & Audio metadata
+metaflac = "0.2"  # FLAC metadata
+mp3-metadata = "0.3"  # MP3 metadata
+wav = "0.1"  # WAV metadata
+
+# Media detection
+mp4 = "0.14"  # MP4 container parsing
+av-data = "0.1"  # Audio/video data types
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+toml = "0.8"
 
 # Error handling
 anyhow = "1.0"
@@ -45,14 +59,22 @@ thiserror = "1.0"
 
 # Utilities
 humansize = "2"
-chrono = "0.4"
-uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
 dirs = "5.0"
 open = "5.0"
+regex = "1.10"
+lazy_static = "1.4"
+num_cpus = "1.16"
 
 # Plugin system
 libloading = "0.8"
+dlopen2 = "0.7"  # Enhanced plugin loading
 
 # Logging
 tracing = "0.1"
 tracing-subscriber = "0.3"
+
+# Color parsing & manipulation
+palette = "0.7"  # Advanced color handling
+colorsys = "0.7"  # Color system conversions

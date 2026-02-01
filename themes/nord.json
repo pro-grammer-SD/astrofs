@@ -1,0 +1,54 @@
+{
+  "name": "nord",
+  "description": "Arctic, north-bluish theme",
+  "author": "AstroFS Team",
+  "version": "1.0.0",
+  "colors": {
+    "primary": "#88C0D0",
+    "secondary": "#A3BE8C",
+    "accent": "#B48EAD",
+    "background": "#2E3440",
+    "foreground": "#ECEFF4",
+    "error": "#BF616A",
+    "warning": "#EBCB8B",
+    "success": "#A3BE8C",
+    "info": "#81A1C1",
+    "file_color": "#ECEFF4",
+    "directory_color": "#88C0D0",
+    "symlink_color": "#81A1C1",
+    "executable_color": "#A3BE8C",
+    "selection_bg": "#434C5E",
+    "selection_fg": "#ECEFF4",
+    "cursor_color": "#81A1C1"
+  },
+  "borders": {
+    "style": "double",
+    "color": "#88C0D0",
+    "focused_color": "#A3BE8C"
+  },
+  "emojis": {
+    "folder": "📁",
+    "file": "📄",
+    "symlink": "🔗",
+    "executable": "⚙️",
+    "archive": "📦",
+    "image": "🖼️",
+    "video": "🎬",
+    "audio": "🎵",
+    "document": "📝",
+    "code": "💻",
+    "bookmark": "🔖",
+    "search": "🔍",
+    "settings": "⚡",
+    "loading": "⏳",
+    "error": "❌",
+    "success": "✅",
+    "info": "ℹ️"
+  },
+  "fonts": {
+    "use_powerline": true,
+    "use_nerd_fonts": true,
+    "enable_italics": true,
+    "enable_bold": true
+  }
+}

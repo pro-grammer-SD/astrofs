@@ -1,4 +1,4 @@
-mod app_new;
+mod app;
 mod bookmarks;
 mod config;
 mod fileops;
@@ -11,10 +11,16 @@ mod preview;
 mod search;
 mod search_history;
 mod theme;
-mod ui_new;
+mod ui;
 mod workspace;
+mod persistence;
+mod plugin_api;
+mod theme_manager;
+mod media_preview;
+mod media_player;
+mod integration_helpers;
 
-use app_new::{App, AppMode, InputMode};
+use app::{App, AppMode, InputMode};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
@@ -62,7 +68,7 @@ fn run_app<B: ratatui::backend::Backend>(
         let size = terminal.get_frame().size();
         app.set_viewport(size.width as usize, size.height as usize);
 
-        terminal.draw(|f| ui_new::draw(f, app))?;
+        terminal.draw(|f| ui::draw(f, app))?;
 
         if !app.running {
             break;

@@ -1,0 +1,54 @@
+{
+  "name": "solarized_dark",
+  "description": "Solarized dark theme",
+  "author": "AstroFS Team",
+  "version": "1.0.0",
+  "colors": {
+    "primary": "#268BD2",
+    "secondary": "#2AA198",
+    "accent": "#D33682",
+    "background": "#002B36",
+    "foreground": "#839496",
+    "error": "#DC322F",
+    "warning": "#B58900",
+    "success": "#859900",
+    "info": "#268BD2",
+    "file_color": "#839496",
+    "directory_color": "#268BD2",
+    "symlink_color": "#2AA198",
+    "executable_color": "#859900",
+    "selection_bg": "#073642",
+    "selection_fg": "#93A1A1",
+    "cursor_color": "#93A1A1"
+  },
+  "borders": {
+    "style": "rounded",
+    "color": "#268BD2",
+    "focused_color": "#859900"
+  },
+  "emojis": {
+    "folder": "📁",
+    "file": "📄",
+    "symlink": "🔗",
+    "executable": "⚙️",
+    "archive": "📦",
+    "image": "🖼️",
+    "video": "🎬",
+    "audio": "🎵",
+    "document": "📝",
+    "code": "💻",
+    "bookmark": "🔖",
+    "search": "🔍",
+    "settings": "⚡",
+    "loading": "⏳",
+    "error": "❌",
+    "success": "✅",
+    "info": "ℹ️"
+  },
+  "fonts": {
+    "use_powerline": true,
+    "use_nerd_fonts": true,
+    "enable_italics": true,
+    "enable_bold": true
+  }
+}

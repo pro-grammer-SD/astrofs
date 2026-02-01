@@ -1,0 +1,54 @@
+{
+  "name": "dracula",
+  "description": "Dark theme with Dracula color scheme",
+  "author": "AstroFS Team",
+  "version": "1.0.0",
+  "colors": {
+    "primary": "#8BE9FD",
+    "secondary": "#50FA7B",
+    "accent": "#FF79C6",
+    "background": "#282A36",
+    "foreground": "#F8F8F2",
+    "error": "#FF5555",
+    "warning": "#F1FA8C",
+    "success": "#50FA7B",
+    "info": "#8BE9FD",
+    "file_color": "#F8F8F2",
+    "directory_color": "#8BE9FD",
+    "symlink_color": "#FF79C6",
+    "executable_color": "#50FA7B",
+    "selection_bg": "#44475A",
+    "selection_fg": "#F8F8F2",
+    "cursor_color": "#F8F8F2"
+  },
+  "borders": {
+    "style": "rounded",
+    "color": "#8BE9FD",
+    "focused_color": "#50FA7B"
+  },
+  "emojis": {
+    "folder": "📁",
+    "file": "📄",
+    "symlink": "🔗",
+    "executable": "⚙️",
+    "archive": "📦",
+    "image": "🖼️",
+    "video": "🎬",
+    "audio": "🎵",
+    "document": "📝",
+    "code": "💻",
+    "bookmark": "🔖",
+    "search": "🔍",
+    "settings": "⚡",
+    "loading": "⏳",
+    "error": "❌",
+    "success": "✅",
+    "info": "ℹ️"
+  },
+  "fonts": {
+    "use_powerline": true,
+    "use_nerd_fonts": true,
+    "enable_italics": true,
+    "enable_bold": true
+  }
+}
