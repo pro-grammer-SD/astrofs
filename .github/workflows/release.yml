@@ -1,7 +1,7 @@
 name: Build and Release App
 
 on:
-  workflow_dispatch:        # manual trigger only
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -28,106 +28,71 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-musl
             bin: astrofs
             osname: linux
+            ext: ""
+            pack: tar
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             bin: astrofs.exe
             osname: windows
+            ext: ".exe"
+            pack: zip
           - os: macos-latest
-            target: x86_64-apple-darwin
+            target: aarch64-apple-darwin
             bin: astrofs
-            osname: macos
+            osname: macos-arm64
+            ext: ""
+            pack: tar
+
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
 
-      # Cache crates.io registry
-      - name: Cache cargo registry
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/registry
-          key: cargo-registry-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: cargo-registry-${{ runner.os }}-
-
-      # Cache cargo git deps
-      - name: Cache cargo git
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/git
-          key: cargo-git-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: cargo-git-${{ runner.os }}-
-
-      # Cache target directory per target
-      - name: Cache target
-        uses: actions/cache@v3
-        with:
-          path: target/${{ matrix.target }}
-          key: cargo-target-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: cargo-target-${{ runner.os }}-${{ matrix.target }}-
+      - if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package binary
+      - name: Package
         shell: bash
         run: |
-          mkdir -p out
-          cp target/${{ matrix.target }}/release/${{ matrix.bin }} out/
-          cd out
-          FILE=astrofs-v${{ needs.version.outputs.version }}-${{ matrix.osname }}-x86_64
-          mv ${{ matrix.bin }} $FILE
-          xz -9 $FILE
-          sha256sum $FILE.xz > $FILE.xz.sha256
+          NAME=astrofs-v${{ needs.version.outputs.version }}-${{ matrix.osname }}-x86_64
+          mkdir pkg
+          cp target/${{ matrix.target }}/release/${{ matrix.bin }} pkg/astrofs${{ matrix.ext }}
+          if [ "${{ matrix.pack }}" = "zip" ]; then
+            cd pkg && zip -9 ../$NAME.zip *
+          else
+            tar -C pkg -cJf $NAME.tar.xz .
+          fi
+          sha256sum $NAME.* > $NAME.sha256
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.osname }}
-          path: out/*
+          path: |
+            *.zip
+            *.tar.xz
+            *.sha256
 
   release:
     needs: [version, build]
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0           # full history + tags for changelog
-
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-
-      - id: time
-        run: echo "utc=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -z "$LAST_TAG" ]; then
-            LOG=$(git log --pretty=format:"- %s")
-          else
-            LOG=$(git log $LAST_TAG..HEAD --pretty=format:"- %s")
-          fi
-          echo "log<<EOF" >> $GITHUB_OUTPUT
-          echo "$LOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.version.outputs.version }}
           name: AstroFS v${{ needs.version.outputs.version }}
-          body: |
-            Release Time: ${{ steps.time.outputs.utc }}
-
-            Changes:
-            ${{ steps.changelog.outputs.log }}
-
-            SHA256 checksums included in artifacts.
           files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
