@@ -1,4 +1,4 @@
-name: Build and Release PyElevate
+name: Build and Release App
 
 on:
   workflow_dispatch:
@@ -10,18 +10,14 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-
 jobs:
   version:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
+      version: ${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      - id: get_version
+      - id: v
         run: |
           V=$(grep '^version' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
           echo "version=$V" >> $GITHUB_OUTPUT
@@ -32,35 +28,23 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            bin: pyelevate
-            osname: linux
-            ext: ""
-            pack: tar
-          - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            bin: pyelevate
-            osname: linux-musl
-            ext: ""
-            pack: tar
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            bin: pyelevate
-            osname: macos-x86_64
-            ext: ""
-            pack: tar
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            bin: pyelevate
-            osname: macos-arm64
+            bin: astrofs
+            osname: linux
             ext: ""
             pack: tar
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            bin: pyelevate.exe
+            bin: astrofs.exe
             osname: windows
             ext: ".exe"
             pack: zip
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            bin: astrofs
+            osname: macos-arm64
+            ext: ""
+            pack: tar
 
     runs-on: ${{ matrix.os }}
 
@@ -69,25 +53,23 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
-      - if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: sudo apt-get update && sudo apt-get install -y musl-tools build-essential
+      - if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package binary
+      - name: Package
         shell: bash
         run: |
-          NAME=pyelevate-v${{ needs.version.outputs.version }}-${{ matrix.osname }}
+          NAME=astrofs-v${{ needs.version.outputs.version }}-${{ matrix.osname }}-x86_64
           mkdir pkg
-          cp target/${{ matrix.target }}/release/${{ matrix.bin }} pkg/pyelevate${{ matrix.ext }}
-          cd pkg
+          cp target/${{ matrix.target }}/release/${{ matrix.bin }} pkg/astrofs${{ matrix.ext }}
           if [ "${{ matrix.pack }}" = "zip" ]; then
-            zip -9 ../$NAME.zip pyelevate${{ matrix.ext }}
+            cd pkg && zip -9 ../$NAME.zip *
           else
-            tar -cJf ../$NAME.tar.xz pyelevate${{ matrix.ext }}
+            tar -C pkg -cJf $NAME.tar.xz .
           fi
-          cd ..
           sha256sum $NAME.* > $NAME.sha256
 
       - uses: actions/upload-artifact@v4
@@ -101,31 +83,16 @@ jobs:
   release:
     needs: [version, build]
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Create checksums manifest
-        run: |
-          echo "# PyElevate Release Checksums (SHA256)" > artifacts/CHECKSUMS.md
-          echo "" >> artifacts/CHECKSUMS.md
-          echo "**Release:** v${{ needs.version.outputs.version }}" >> artifacts/CHECKSUMS.md
-          echo "" >> artifacts/CHECKSUMS.md
-          for f in artifacts/*.sha256; do
-            echo "### $(basename ${f%.*})" >> artifacts/CHECKSUMS.md
-            echo '```' >> artifacts/CHECKSUMS.md
-            cat "$f" >> artifacts/CHECKSUMS.md
-            echo '```' >> artifacts/CHECKSUMS.md
-            echo "" >> artifacts/CHECKSUMS.md
-          done
-          cat artifacts/CHECKSUMS.md
-
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.version.outputs.version }}
-          name: PyElevate v${{ needs.version.outputs.version }}
+          name: AstroFS v${{ needs.version.outputs.version }}
           files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
